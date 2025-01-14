@@ -39,7 +39,7 @@ Aplikasi download video dan audio YouTube dengan fitur antrian dan download play
     pkg install -y python ffmpeg python-pip git
 
     # Clone repository (jika menggunakan git)
-    git clone [URL_REPOSITORY]
+    git clone https://github.com/gorogith/youtube-downloader.git
     cd youtube-Downloader
 
     # Atau download manual dan extract ke folder
@@ -68,7 +68,7 @@ Aplikasi download video dan audio YouTube dengan fitur antrian dan download play
 
 2. Download program:
     ```sh
-    git clone [URL_REPOSITORY]
+    git clone https://github.com/gorogith/youtube-downloader.git
     cd youtube-Downloader
     ```
 
