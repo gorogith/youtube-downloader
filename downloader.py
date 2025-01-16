@@ -68,6 +68,9 @@ def download_video(url, download_path='./downloads', title=None, subtitles=False
             "yt-dlp",
             "-q",  # Quiet mode
             "--no-warnings",
+            "--force-ipv4",  # Force IPv4 to avoid some connection issues
+            "--geo-bypass",  # Try to bypass geo-restrictions
+            "--no-check-certificates",  # Ignore SSL certificate validation
             "-f", "bestvideo[ext=mp4]+bestaudio[ext=m4a]/mp4",
             "--merge-output-format", "mp4",
             "-o", os.path.join(download_path, "%(title)s.%(ext)s"),
@@ -200,7 +203,9 @@ def handle_input():
             url = input("Masukkan URL YouTube: ")
             download_path = input("Masukkan path download (default './downloads'): ") or './downloads'
             subtitles = input("Download dengan subtitle? (y/n, default: n): ").strip().lower() == 'y'
-            subtitle_lang = input("Masukkan kode bahasa subtitle (default 'en'): ") or 'en'
+            subtitle_lang = 'en'
+            if subtitles:
+                subtitle_lang = input("Masukkan kode bahasa subtitle (default 'en'): ") or 'en'
             title = get_video_title(url)
             if title:
                 download_queue.put({
@@ -240,7 +245,9 @@ def handle_input():
 
                 if sub_choice == '1':
                     subtitles = input("Download dengan subtitle? (y/n, default: n): ").strip().lower() == 'y'
-                    subtitle_lang = input("Masukkan kode bahasa subtitle (default 'en'): ") or 'en'
+                    subtitle_lang = 'en'
+                    if subtitles:
+                        subtitle_lang = input("Masukkan kode bahasa subtitle (default 'en'): ") or 'en'
                     download_playlist(url, download_path, is_audio=False, subtitles=subtitles, subtitle_lang=subtitle_lang)
                 elif sub_choice == '2':
                     format = input("Masukkan format audio (mp3/m4a, default: mp3): ") or 'mp3'
