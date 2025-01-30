@@ -33,6 +33,7 @@ def normalize_url(url):
         return f'https://www.youtube.com/playlist?list={list_id}'
     return url
 
+
 # Fungsi untuk mendapatkan informasi playlist
 def get_playlist_info(url):
     url = normalize_url(url)  # Normalize the URL
@@ -68,21 +69,30 @@ def download_video(url, download_path='./downloads', title=None, subtitles=False
             "yt-dlp",
             "-q",  # Quiet mode
             "--no-warnings",
-            "--force-ipv4",  # Force IPv4 to avoid some connection issues
-            "--geo-bypass",  # Try to bypass geo-restrictions
-            "--no-check-certificates",  # Ignore SSL certificate validation
-            "-f", "bestvideo[ext=mp4]+bestaudio[ext=m4a]/mp4",
+            "--force-ipv4",
+            "--geo-bypass",
+            "--no-check-certificates",
+            "--format-sort", "res,fps,codec:h264",
+            "--cookies-from-browser", "chrome",
+            "--extractor-retries", "3",
+            "--fragment-retries", "3",
+            "--retry-sleep", "5",
+            "-f", "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best",
+        ]
+        
+        if subtitles:
+            command.extend([
+                "--write-sub",
+                "--write-auto-sub",
+                "--sub-lang", subtitle_lang,
+                "--embed-subs"
+            ])
+
+        command.extend([
             "--merge-output-format", "mp4",
             "-o", os.path.join(download_path, "%(title)s.%(ext)s"),
             url,
-        ]
-        if subtitles:
-            command.extend([
-                "--write-sub",  # Unduh subtitle jika tersedia
-                "--write-auto-sub",  # Gunakan subtitle otomatis jika tidak ada
-                "--sub-lang", subtitle_lang,  # Tentukan bahasa subtitle
-                "--embed-subs"  # Sematkan subtitle ke dalam video
-            ])
+        ])
 
         process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
         for line in process.stdout:
@@ -202,10 +212,20 @@ def handle_input():
         if choice == '1':
             url = input("Masukkan URL YouTube: ")
             download_path = input("Masukkan path download (default './downloads'): ") or './downloads'
-            subtitles = input("Download dengan subtitle? (y/n, default: n): ").strip().lower() == 'y'
+            
+            # Validasi input subtitle
+            while True:
+                sub_choice = input("Download dengan subtitle? (y/n): ").strip().lower()
+                if sub_choice in ['y', 'n']:
+                    break
+                print("Error: Mohon masukkan 'y' atau 'n' saja!")
+            
+            subtitles = (sub_choice == 'y')
             subtitle_lang = 'en'
+            
             if subtitles:
                 subtitle_lang = input("Masukkan kode bahasa subtitle (default 'en'): ") or 'en'
+
             title = get_video_title(url)
             if title:
                 download_queue.put({
