@@ -9,6 +9,12 @@ import yt_dlp
 download_queue = queue.Queue()
 current_download = {"type": None, "title": None, "progress": None}  # Status download yang sedang berlangsung
 
+# Constants
+DEFAULT_DOWNLOAD_PATH = './downloads'
+YES_NO_PROMPT = " (y/n, default: n): "
+DEFAULT_SUBTITLE_LANG = 'en'
+AUDIO_FORMATS = ['mp3', 'm4a']
+
 # Fungsi untuk mendapatkan judul video dari URL
 def get_video_title(url):
     try:
@@ -32,7 +38,6 @@ def normalize_url(url):
         list_id = url.split('list=')[-1].split('&')[0]
         return f'https://www.youtube.com/playlist?list={list_id}'
     return url
-
 
 # Fungsi untuk mendapatkan informasi playlist
 def get_playlist_info(url):
@@ -62,16 +67,13 @@ def get_playlist_info(url):
         return None
 
 # Fungsi untuk mengunduh video
-def download_video(url, download_path='./downloads', title=None, subtitles=False, subtitle_lang='en'):
+def download_video(url, download_path=DEFAULT_DOWNLOAD_PATH, title=None, subtitles=False, subtitle_lang=DEFAULT_SUBTITLE_LANG):
     os.makedirs(download_path, exist_ok=True)
     try:
         command = [
             "yt-dlp",
             "-q",  # Quiet mode
             "--no-warnings",
-            "--force-ipv4",  # Force IPv4 to avoid some connection issues
-            "--geo-bypass",  # Try to bypass geo-restrictions
-            "--no-check-certificates",  # Ignore SSL certificate validation
             "-f", "bestvideo[ext=mp4]+bestaudio[ext=m4a]/mp4",
             "--merge-output-format", "mp4",
             "-o", os.path.join(download_path, "%(title)s.%(ext)s"),
@@ -98,9 +100,8 @@ def download_video(url, download_path='./downloads', title=None, subtitles=False
     except Exception as e:
         print(f"\n[ERROR] Terjadi kesalahan saat mengunduh video '{title}': {e}")
 
-
 # Fungsi untuk mengunduh audio
-def download_audio(url, download_path='./downloads', format='mp3', title=None):
+def download_audio(url, download_path=DEFAULT_DOWNLOAD_PATH, format='mp3', title=None):
     os.makedirs(download_path, exist_ok=True)
     try:
         output_template = os.path.join(download_path, f"%(title)s.%(ext)s")
@@ -127,7 +128,7 @@ def download_audio(url, download_path='./downloads', format='mp3', title=None):
         print(f"\n[ERROR] Terjadi kesalahan saat mengunduh audio '{title}': {e}")
 
 # Fungsi untuk menambahkan unduhan playlist ke antrian
-def download_playlist(url, download_path='./downloads', is_audio=False, format='mp3', subtitles=False, subtitle_lang='en'):
+def download_playlist(url, download_path=DEFAULT_DOWNLOAD_PATH, is_audio=False, format='mp3', subtitles=False, subtitle_lang=DEFAULT_SUBTITLE_LANG):
     url = normalize_url(url)  # Normalize the URL
     playlist_info = get_playlist_info(url)
     if not playlist_info:
@@ -161,15 +162,15 @@ def process_queue():
             if item["type"] == "video":
                 download_video(
                     item["url"],
-                    item.get('path', './downloads'),
+                    item.get('path', DEFAULT_DOWNLOAD_PATH),
                     title=item["title"],
                     subtitles=item.get('subtitles', False),
-                    subtitle_lang=item.get('subtitle_lang', 'en')
+                    subtitle_lang=item.get('subtitle_lang', DEFAULT_SUBTITLE_LANG)
                 )
             elif item["type"] == "audio":
                 download_audio(
                     item["url"],
-                    item.get('path', './downloads'),
+                    item.get('path', DEFAULT_DOWNLOAD_PATH),
                     format=item.get('format', 'mp3'),
                     title=item["title"]
                 )
@@ -217,11 +218,15 @@ def handle_input():
                     continue
                 break
 
-            download_path = input("Masukkan path download (default './downloads'): ") or './downloads'
-            subtitles = input("Download dengan subtitle? (y/n, default: n): ").strip().lower() == 'y'
-            subtitle_lang = 'en'
+            download_path = input(f"Masukkan path download (default '{DEFAULT_DOWNLOAD_PATH}'): ") or DEFAULT_DOWNLOAD_PATH
+            subtitles = input(f"Download dengan subtitle?{YES_NO_PROMPT}").strip().lower()
+            while subtitles not in ['y', 'n', '']:
+                print("\n[ERROR] Pilihan tidak valid! Masukkan 'y' atau 'n'.")
+                subtitles = input(f"Download dengan subtitle?{YES_NO_PROMPT}").strip().lower()
+            subtitles = subtitles == 'y'
+            subtitle_lang = DEFAULT_SUBTITLE_LANG
             if subtitles:
-                subtitle_lang = input("Masukkan kode bahasa subtitle (default 'en'): ") or 'en'
+                subtitle_lang = input(f"Masukkan kode bahasa subtitle (default '{DEFAULT_SUBTITLE_LANG}'): ") or DEFAULT_SUBTITLE_LANG
             title = get_video_title(url)
             download_queue.put({
                 'type': 'video',
@@ -244,9 +249,12 @@ def handle_input():
                     continue
                 break
 
-            download_path = input("Masukkan path download (default './downloads'): ") or './downloads'
+            download_path = input(f"Masukkan path download (default '{DEFAULT_DOWNLOAD_PATH}'): ") or DEFAULT_DOWNLOAD_PATH
             title = get_video_title(url)
-            format = input("Masukkan format audio (mp3/m4a, default: mp3): ") or 'mp3'
+            format = input(f"Masukkan format audio ({'/'.join(AUDIO_FORMATS)}, default: mp3): ") or 'mp3'
+            while format not in AUDIO_FORMATS:
+                print(f"\n[ERROR] Format tidak valid! Masukkan salah satu dari {', '.join(AUDIO_FORMATS)}.")
+                format = input(f"Masukkan format audio ({'/'.join(AUDIO_FORMATS)}, default: mp3): ") or 'mp3'
             download_queue.put({
                 'type': 'audio',
                 'url': url,
@@ -273,16 +281,23 @@ def handle_input():
                         continue
                     break
 
-                download_path = input("Masukkan path download (default './downloads'): ") or './downloads'
+                download_path = input(f"Masukkan path download (default '{DEFAULT_DOWNLOAD_PATH}'): ") or DEFAULT_DOWNLOAD_PATH
 
                 if sub_choice == '1':
-                    subtitles = input("Download dengan subtitle? (y/n, default: n): ").strip().lower() == 'y'
-                    subtitle_lang = 'en'
+                    subtitles = input(f"Download dengan subtitle?{YES_NO_PROMPT}").strip().lower()
+                    while subtitles not in ['y', 'n', '']:
+                        print("\n[ERROR] Pilihan tidak valid! Masukkan 'y' atau 'n'.")
+                        subtitles = input(f"Download dengan subtitle?{YES_NO_PROMPT}").strip().lower()
+                    subtitles = subtitles == 'y'
+                    subtitle_lang = DEFAULT_SUBTITLE_LANG
                     if subtitles:
-                        subtitle_lang = input("Masukkan kode bahasa subtitle (default 'en'): ") or 'en'
+                        subtitle_lang = input(f"Masukkan kode bahasa subtitle (default '{DEFAULT_SUBTITLE_LANG}'): ") or DEFAULT_SUBTITLE_LANG
                     download_playlist(url, download_path, is_audio=False, subtitles=subtitles, subtitle_lang=subtitle_lang)
                 elif sub_choice == '2':
-                    format = input("Masukkan format audio (mp3/m4a, default: mp3): ") or 'mp3'
+                    format = input(f"Masukkan format audio ({'/'.join(AUDIO_FORMATS)}, default: mp3): ") or 'mp3'
+                    while format not in AUDIO_FORMATS:
+                        print(f"\n[ERROR] Format tidak valid! Masukkan salah satu dari {', '.join(AUDIO_FORMATS)}.")
+                        format = input(f"Masukkan format audio ({'/'.join(AUDIO_FORMATS)}, default: mp3): ") or 'mp3'
                     download_playlist(url, download_path, is_audio=True, format=format)
             else:
                 print("\n[ERROR] Pilihan tidak valid!")
