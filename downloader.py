@@ -10,7 +10,7 @@ download_queue = queue.Queue()
 current_download = {"type": None, "title": None, "progress": None}  # Status download yang sedang berlangsung
 
 # Constants
-DEFAULT_DOWNLOAD_PATH = './downloads'
+DEFAULT_DOWNLOAD_PATH = './download'
 YES_NO_PROMPT = " (y/n, default: n): "
 DEFAULT_SUBTITLE_LANG = 'en'
 AUDIO_FORMATS = ['mp3', 'm4a']
@@ -66,8 +66,27 @@ def get_playlist_info(url):
         print(f"\n[ERROR] Terjadi kesalahan: {e}")
         return None
 
+# Fungsi untuk mendapatkan judul video dan nama channel dari URL
+def get_video_info(url):
+    try:
+        ydl_opts = {
+            'quiet': True,
+            'extract_flat': True,
+            'force_generic_extractor': False
+        }
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info_dict = ydl.extract_info(url, download=False)
+            if not info_dict or 'title' not in info_dict or 'uploader' not in info_dict:
+                return None, None
+            return info_dict['title'], info_dict['uploader']
+    except Exception as e:
+        print(f"\n[ERROR] Gagal mendapatkan informasi dari URL {url}: {e}")
+        return None, None
+
 # Fungsi untuk mengunduh video
-def download_video(url, download_path=DEFAULT_DOWNLOAD_PATH, title=None, subtitles=False, subtitle_lang=DEFAULT_SUBTITLE_LANG):
+def download_video(url, download_path=DEFAULT_DOWNLOAD_PATH, title=None, channel=None, subtitles=False, subtitle_lang=DEFAULT_SUBTITLE_LANG):
+    if channel:
+        download_path = os.path.join(download_path, channel)
     os.makedirs(download_path, exist_ok=True)
     try:
         command = [
@@ -101,7 +120,9 @@ def download_video(url, download_path=DEFAULT_DOWNLOAD_PATH, title=None, subtitl
         print(f"\n[ERROR] Terjadi kesalahan saat mengunduh video '{title}': {e}")
 
 # Fungsi untuk mengunduh audio
-def download_audio(url, download_path=DEFAULT_DOWNLOAD_PATH, format='mp3', title=None):
+def download_audio(url, download_path=DEFAULT_DOWNLOAD_PATH, format='mp3', title=None, channel=None):
+    if channel:
+        download_path = os.path.join(download_path, channel)
     os.makedirs(download_path, exist_ok=True)
     try:
         output_template = os.path.join(download_path, f"%(title)s.%(ext)s")
@@ -135,19 +156,21 @@ def download_playlist(url, download_path=DEFAULT_DOWNLOAD_PATH, is_audio=False, 
         print("\n[ERROR] URL bukan merupakan playlist yang valid")
         return
 
-    playlist_path = os.path.join(download_path, playlist_info['title'])
-    os.makedirs(playlist_path, exist_ok=True)
-
     total_videos = len(playlist_info['videos'])
     print(f"\n[INFO] Menambahkan {total_videos} video/audio dari playlist '{playlist_info['title']}' ke antrian")
 
     for video in playlist_info['videos']:
+        title, channel = get_video_info(video['url'])
+        channel_path = os.path.join(download_path, channel)
+        os.makedirs(channel_path, exist_ok=True)
+        playlist_path = os.path.join(channel_path, playlist_info['title'])
+        os.makedirs(playlist_path, exist_ok=True)
         download_queue.put({
             'type': 'audio' if is_audio else 'video',
             'url': video['url'],
             'path': playlist_path,
             'format': format if is_audio else None,
-            'title': video['title'],
+            'title': title,
             'subtitles': subtitles,
             'subtitle_lang': subtitle_lang
         })
@@ -164,6 +187,7 @@ def process_queue():
                     item["url"],
                     item.get('path', DEFAULT_DOWNLOAD_PATH),
                     title=item["title"],
+                    channel=item.get('channel', None),
                     subtitles=item.get('subtitles', False),
                     subtitle_lang=item.get('subtitle_lang', DEFAULT_SUBTITLE_LANG)
                 )
@@ -172,7 +196,8 @@ def process_queue():
                     item["url"],
                     item.get('path', DEFAULT_DOWNLOAD_PATH),
                     format=item.get('format', 'mp3'),
-                    title=item["title"]
+                    title=item["title"],
+                    channel=item.get('channel', None)
                 )
             current_download["type"] = None
             current_download["title"] = None
