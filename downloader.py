@@ -10,7 +10,7 @@ download_queue = queue.Queue()
 current_download = {"type": None, "title": None, "progress": None}  # Status download yang sedang berlangsung
 
 # Constants
-DEFAULT_DOWNLOAD_PATH = './download'
+DEFAULT_DOWNLOAD_PATH = '/media/xru/New Volume/Download'
 YES_NO_PROMPT = " (y/n, default: n): "
 DEFAULT_SUBTITLE_LANG = 'en'
 AUDIO_FORMATS = ['mp3', 'm4a']
@@ -252,11 +252,13 @@ def handle_input():
             subtitle_lang = DEFAULT_SUBTITLE_LANG
             if subtitles:
                 subtitle_lang = input(f"Masukkan kode bahasa subtitle (default '{DEFAULT_SUBTITLE_LANG}'): ") or DEFAULT_SUBTITLE_LANG
-            title = get_video_title(url)
+            title, channel = get_video_info(url)
+            channel_path = os.path.join(download_path, channel)
+            os.makedirs(channel_path, exist_ok=True)
             download_queue.put({
                 'type': 'video',
                 'url': url,
-                'path': download_path,
+                'path': channel_path,
                 'title': title,
                 'subtitles': subtitles,
                 'subtitle_lang': subtitle_lang
