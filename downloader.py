@@ -14,6 +14,7 @@ DEFAULT_DOWNLOAD_PATH = '/media/xru/New Volume/Download'
 YES_NO_PROMPT = " (y/n, default: n): "
 DEFAULT_SUBTITLE_LANG = 'en'
 AUDIO_FORMATS = ['mp3', 'm4a']
+COOKIES_FILE = '/path/to/your/actual/cookies.txt'  # Update this path to the correct location of your cookies file
 
 # Fungsi untuk mendapatkan judul video dari URL
 def get_video_title(url):
@@ -98,6 +99,8 @@ def download_video(url, download_path=DEFAULT_DOWNLOAD_PATH, title=None, channel
             "-o", os.path.join(download_path, "%(title)s.%(ext)s"),
             url,
         ]
+        if os.path.exists(COOKIES_FILE):
+            command.extend(["--cookies", COOKIES_FILE])  # Use cookies for authenticated downloads if the file exists
         if subtitles:
             command.extend([
                 "--write-sub",  # Unduh subtitle jika tersedia
