@@ -94,13 +94,12 @@ def download_video(url, download_path=DEFAULT_DOWNLOAD_PATH, title=None, channel
             "yt-dlp",
             "-q",  # Quiet mode
             "--no-warnings",
+            "--no-progress",  # Hide download progress
             "-f", "bestvideo[ext=mp4]+bestaudio[ext=m4a]/mp4",
             "--merge-output-format", "mp4",
             "-o", os.path.join(download_path, "%(title)s.%(ext)s"),
             url,
         ]
-        if os.path.exists(COOKIES_FILE):
-            command.extend(["--cookies", COOKIES_FILE])  # Use cookies for authenticated downloads if the file exists
         if subtitles:
             command.extend([
                 "--write-sub",  # Unduh subtitle jika tersedia
@@ -134,9 +133,12 @@ def download_audio(url, download_path=DEFAULT_DOWNLOAD_PATH, format='mp3', title
             "-f", "bestaudio[ext=m4a]",
             "--extract-audio",
             "--audio-format", format,
+            "--no-progress",  # Hide download progress
             "-o", output_template,
             url,
         ]
+        if os.path.exists(COOKIES_FILE):
+            command.extend(["--cookies", COOKIES_FILE])  # Use cookies for authenticated downloads if the file exists
 
         process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
         for line in process.stdout:
